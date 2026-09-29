@@ -1,8 +1,32 @@
 # Ventaja International Group — Work Immersion
 
-**Student:** Santiago Nikos  
+**Student:** Santiago Kit  
 **Company:** Ventaja International Group  
+**Role:** Odoo Developer (Work Immersion / Training)  
 **Date Started:** September 2026  
+**Work Location:** Onsite — Ortigas, Pasig City (5x/week)  
+
+---
+
+## Skills Profile
+
+### Intermediate Skills
+- **Python** — Backend development, scripting, automation
+- **Django** — Web framework, models, views, templates, REST APIs
+- **JavaScript** — Frontend interactivity, DOM manipulation
+- **Git & GitHub** — Version control, branching, collaboration
+- **SQL / Database** — Basic queries, relational data modeling
+
+### Currently Learning
+- **Odoo Framework** — Business process automation, ERP modules, ORM
+- **AI-Assisted Development** — Using Claude, ChatGPT for code quality and speed
+- **System Integrations** — Payment platform APIs, third-party services
+- **Business Process Automation** — Workflow design, process mapping
+
+### Soft Skills
+- Team collaboration and communication
+- Active involvement in tech communities
+- Self-directed learning and adaptability
 
 ---
 
