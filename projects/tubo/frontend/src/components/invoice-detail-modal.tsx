@@ -107,7 +107,7 @@ export function InvoiceDetailModal({ invoiceId, onClose, onRetried }: InvoiceDet
                 <StatusPill status={invoice.status} />
                 {invoice.status === "failed" && (
                   <button type="button" onClick={handleRetry} disabled={retrying}
-                    className="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                    className="flex items-center gap-1 rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60">
                     {retrying ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw className="h-3.5 w-3.5" />}
                     Retry
                   </button>

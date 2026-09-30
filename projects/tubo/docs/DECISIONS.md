@@ -790,3 +790,50 @@ Worker 20 ──┘
 2. Verify rate limiter is shared across all workers (Redis in production)
 3. Monitor queue depth — it should start decreasing
 4. Watch government API response times — if they increase, back off
+
+---
+
+## Bug Fix: `claim_submission_jobs` must set invoice status to `'processing'`
+
+**Migration:** `20260930000700_fix_claim_sets_invoice_processing.sql`
+
+### What was wrong
+
+The `claim_submission_jobs` function updated `submission_jobs.status` to `'processing'` but **never** touched `invoices.status`. The invoice stayed `'pending'`.
+
+Then when the worker called `complete_submission_attempt` — which tries to set the invoice to `'submitted'`, `'rejected'`, or `'failed'` — the `guard_invoice_update` trigger blocked it because:
+
+```
+pending → submitted   ❌  Not allowed
+pending → rejected    ❌  Not allowed
+pending → failed      ❌  Not allowed
+```
+
+Only `processing → submitted/rejected/failed` is valid.
+
+### What it caused
+
+1. Every worker attempt silently failed at the database level
+2. The job lease expired, so the worker reclaimed it — incrementing `attempts` each time
+3. Attempts climbed past `max_attempts` (hence "Attempt 25 of 15" in the UI)
+4. The invoice was never submitted, rejected, or marked as failed — it stayed `'pending'` forever
+
+### The fix
+
+The `claim_submission_jobs` function now uses a CTE to atomically update **both** tables:
+
+```sql
+with claimed as (
+    update submission_jobs ...
+    returning j.*
+),
+mark_invoices as (
+    update invoices set status = 'processing'
+     where id in (select invoice_id from claimed)
+)
+select * from claimed;
+```
+
+The migration also resets stuck data:
+- Jobs stuck in `'processing'` with a `'pending'` invoice → reset to `'queued'`
+- Jobs with inflated attempt counters (from the bug loop) → reset `attempts = 0`

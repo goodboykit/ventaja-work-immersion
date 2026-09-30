@@ -7,7 +7,8 @@ import { CURRENCIES } from "@/lib/currencies";
 import { formatMoney, todayIsoDate } from "@/lib/format";
 import { IdempotencyKeyStore } from "@/lib/idempotency-key";
 import { checkForm, emptyForm, errorsFromDetails, liveTotals, newItem, toRequestBody, type FieldErrors, type InvoiceFormValues } from "@/lib/invoice-form";
-import { formatTaxId } from "@/lib/tax-id-format";
+import { formatInvoiceNumber } from "@/lib/invoice-number-format";
+import { completeTaxId, formatTaxId } from "@/lib/tax-id-format";
 import { useApp } from "@/providers/providers";
 import { useToast } from "./toast";
 import { Spinner } from "./spinner";
@@ -129,8 +130,10 @@ export function CreateInvoiceModal({ open, onClose, onCreated }: CreateInvoiceMo
             </div>
             <div className="mt-4">
               <Field label="Customer Tax ID" required error={errors.customer_tax_id}>
-                <input type="text" value={values.customer_tax_id} onChange={(e) => set("customer_tax_id", formatTaxId(e.target.value))}
-                  className={fieldClass(errors.customer_tax_id)} placeholder="123-456-789-000" />
+                <input type="text" value={values.customer_tax_id}
+                  onChange={(e) => set("customer_tax_id", formatTaxId(e.target.value))}
+                  onBlur={() => { if (values.customer_tax_id.replace(/[^0-9]/g, "").length >= 9) set("customer_tax_id", completeTaxId(values.customer_tax_id)); }}
+                  className={fieldClass(errors.customer_tax_id)} placeholder="123-456-789-000" maxLength={15} />
               </Field>
             </div>
           </section>
@@ -140,7 +143,7 @@ export function CreateInvoiceModal({ open, onClose, onCreated }: CreateInvoiceMo
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">2. Dates &amp; Reference</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Invoice Number" required error={errors.invoice_number}>
-                <input type="text" value={values.invoice_number} onChange={(e) => set("invoice_number", e.target.value.toUpperCase())}
+                <input type="text" value={values.invoice_number} onChange={(e) => set("invoice_number", formatInvoiceNumber(e.target.value))}
                   className={`${fieldClass(errors.invoice_number)} uppercase`} placeholder="INV-2026-001" />
               </Field>
               <Field label="Invoice Date" required error={errors.invoice_date}>
