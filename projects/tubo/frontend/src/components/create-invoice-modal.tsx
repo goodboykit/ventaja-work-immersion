@@ -111,7 +111,7 @@ export function CreateInvoiceModal({ open, onClose, onCreated }: CreateInvoiceMo
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {errors.form && <p className="text-sm text-rose-600">{errors.form}</p>}
 
           {/* Section 1: Customer Information */}
