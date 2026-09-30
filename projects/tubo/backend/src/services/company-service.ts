@@ -42,7 +42,13 @@ export class CompanyService {
     const acceptUrl = `${this.appBaseUrl}/invite/${invite.token}`;
 
     const company = await this.companies.findByUserId(auth.userId);
-    await this.email.sendInvite({ to: email, companyName: company?.name ?? "your company", acceptUrl });
+    // Email is a best-effort side effect: the invite is already created and the link is returned,
+    // so a delivery failure (bad address, provider limit) must not fail the whole request.
+    try {
+      await this.email.sendInvite({ to: email, companyName: company?.name ?? "your company", acceptUrl });
+    } catch (err) {
+      console.error(`Invite email could not be sent to ${email}:`, (err as Error).message);
+    }
 
     await this.audit?.record({
       companyId: auth.companyId,

@@ -1,5 +1,5 @@
 import type { Authenticator } from "../auth/authenticator.ts";
-import { ValidationError } from "../domain/errors.ts";
+import { AppError, ValidationError } from "../domain/errors.ts";
 import type { CompanyRepository } from "../repositories/company-repository.ts";
 import type { AuditService } from "../services/audit-service.ts";
 import { monthRange } from "../services/audit-service.ts";
@@ -80,17 +80,24 @@ export class ReportApi {
       const report = await this.audit.monthlyReport(company?.name ?? "Your company", auth.companyId, month);
       const { label } = monthRange(month);
 
-      await this.email.sendReport({
-        to: recipient,
-        subject: `Monthly invoicing report — ${label}`,
-        intro: `Please find below a summary of the invoices issued by ${report.company} during ${label}.`,
-        lines: [
-          `Total invoices: ${report.totalCount}`,
-          ...report.counts.map((c) => `${c.label}: ${c.count}`),
-          `Total value: ${Number(report.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        ],
-        viewUrl: `${this.appBaseUrl}/report/monthly?month=${month}`,
-      });
+      try {
+        await this.email.sendReport({
+          to: recipient,
+          subject: `Monthly invoicing report — ${label}`,
+          intro: `Please find below a summary of the invoices issued by ${report.company} during ${label}.`,
+          lines: [
+            `Total invoices: ${report.totalCount}`,
+            ...report.counts.map((c) => `${c.label}: ${c.count}`),
+            `Total value: ${Number(report.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          ],
+          viewUrl: `${this.appBaseUrl}/report/monthly?month=${month}`,
+        });
+      } catch (err) {
+        // The email provider rejected or failed. Report it clearly (not a raw 500), and include
+        // the view link so the user can still open the report.
+        throw new AppError(502, "email_failed",
+          `The report could not be emailed (${(err as Error).message}). You can still open it from the dashboard.`);
+      }
 
       return json(200, { data: { emailed: true, to: recipient, month } });
     });
