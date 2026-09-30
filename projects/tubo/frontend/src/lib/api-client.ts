@@ -81,7 +81,7 @@ export class ApiClient {
   }
 
   getSummary(): Promise<StatusSummary> {
-    return this.request<{ data: StatusSummary }>("GET", "/api/invoices/summary").then((r) => r.data);
+    return this.request<{ data: StatusSummary }>("GET", "/api/v1/invoices/summary").then((r) => r.data);
   }
 
   listInvoices(query: InvoiceQuery = {}): Promise<InvoicePage> {
@@ -93,19 +93,19 @@ export class ApiClient {
     if (query.limit) params.set("limit", String(query.limit));
     if (query.cursor) params.set("cursor", query.cursor);
     const queryString = params.toString();
-    return this.request<InvoicePage>("GET", `/api/invoices${queryString ? `?${queryString}` : ""}`);
+    return this.request<InvoicePage>("GET", `/api/v1/invoices${queryString ? `?${queryString}` : ""}`);
   }
 
   getInvoice(id: string): Promise<InvoiceDetail> {
-    return this.request<{ data: InvoiceDetail }>("GET", `/api/invoices/${encodeURIComponent(id)}`).then((r) => r.data);
+    return this.request<{ data: InvoiceDetail }>("GET", `/api/v1/invoices/${encodeURIComponent(id)}`).then((r) => r.data);
   }
 
   createInvoice(body: CreateInvoiceBody, idempotencyKey: string): Promise<CreatedInvoice> {
-    return this.request<{ data: CreatedInvoice }>("POST", "/api/invoices", body, { "Idempotency-Key": idempotencyKey }).then((r) => r.data);
+    return this.request<{ data: CreatedInvoice }>("POST", "/api/v1/invoices", body, { "Idempotency-Key": idempotencyKey }).then((r) => r.data);
   }
 
   retryInvoice(id: string): Promise<{ id: string; status: InvoiceStatus }> {
-    return this.request<{ data: { id: string; status: InvoiceStatus } }>("POST", `/api/invoices/${encodeURIComponent(id)}/retry`).then((r) => r.data);
+    return this.request<{ data: { id: string; status: InvoiceStatus } }>("POST", `/api/v1/invoices/${encodeURIComponent(id)}/retry`).then((r) => r.data);
   }
 
   private async request<T>(method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {

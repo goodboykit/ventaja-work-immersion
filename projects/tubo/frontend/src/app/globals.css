@@ -32,3 +32,10 @@ body {
 .toast-in {
   animation: toast-in 0.18s ease-out;
 }
+
+/* Always show the up/down spinner arrows on number inputs (not just on hover). */
+.spinner-always::-webkit-inner-spin-button,
+.spinner-always::-webkit-outer-spin-button {
+  opacity: 1;
+  height: 28px;
+}

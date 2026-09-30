@@ -140,8 +140,8 @@ export function CreateInvoiceModal({ open, onClose, onCreated }: CreateInvoiceMo
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">2. Dates &amp; Reference</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Invoice Number" required error={errors.invoice_number}>
-                <input type="text" value={values.invoice_number} onChange={(e) => set("invoice_number", e.target.value)}
-                  className={fieldClass(errors.invoice_number)} placeholder="INV-2026-001" />
+                <input type="text" value={values.invoice_number} onChange={(e) => set("invoice_number", e.target.value.toUpperCase())}
+                  className={`${fieldClass(errors.invoice_number)} uppercase`} placeholder="INV-2026-001" />
               </Field>
               <Field label="Invoice Date" required error={errors.invoice_date}>
                 <input type="date" value={values.invoice_date} onChange={(e) => set("invoice_date", e.target.value)}
@@ -186,17 +186,17 @@ export function CreateInvoiceModal({ open, onClose, onCreated }: CreateInvoiceMo
                   </div>
                   <div>
                     <input type="number" min="1" step="1" value={item.quantity} onChange={(e) => setItem(i, "quantity", e.target.value)}
-                      className={`${fieldClass(errors[`items.${i}.quantity`])} text-center`} placeholder="1" />
+                      className={`${fieldClass(errors[`items.${i}.quantity`])} text-center spinner-always`} placeholder="1" />
                     {errors[`items.${i}.quantity`] && <p className="text-[11px] text-rose-500 mt-0.5">{errors[`items.${i}.quantity`]}</p>}
                   </div>
                   <div>
-                    <input type="text" inputMode="decimal" value={item.unit_price} onChange={(e) => setItem(i, "unit_price", e.target.value)}
-                      className={fieldClass(errors[`items.${i}.unit_price`])} placeholder="0.00" />
+                    <input type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => setItem(i, "unit_price", e.target.value)}
+                      className={`${fieldClass(errors[`items.${i}.unit_price`])} spinner-always`} placeholder="0.00" />
                     {errors[`items.${i}.unit_price`] && <p className="text-[11px] text-rose-500 mt-0.5">{errors[`items.${i}.unit_price`]}</p>}
                   </div>
                   <div>
-                    <input type="text" inputMode="decimal" value={item.tax} onChange={(e) => setItem(i, "tax", e.target.value)}
-                      className={fieldClass(errors[`items.${i}.tax`])} placeholder="0.00" />
+                    <input type="number" min="0" step="0.01" value={item.tax} onChange={(e) => setItem(i, "tax", e.target.value)}
+                      className={`${fieldClass(errors[`items.${i}.tax`])} spinner-always`} placeholder="0.00" />
                     {errors[`items.${i}.tax`] && <p className="text-[11px] text-rose-500 mt-0.5">{errors[`items.${i}.tax`]}</p>}
                   </div>
                   <div className="text-right text-sm font-medium text-slate-700 pt-2">

@@ -44,9 +44,9 @@ describe("ApiClient", () => {
     await api.listInvoices({});
     await api.listInvoices({ status: "failed", invoiceNumber: "INV 1", dateFrom: "2026-01-01", dateTo: "2026-02-01", limit: 20, cursor: "abc" });
 
-    assert.equal(calls[0]!.url, "/api/invoices");
+    assert.equal(calls[0]!.url, "/api/v1/invoices");
     const url = new URL(calls[1]!.url, "http://x");
-    assert.equal(url.pathname, "/api/invoices");
+    assert.equal(url.pathname, "/api/v1/invoices");
     assert.deepEqual(Object.fromEntries(url.searchParams), {
       status: "failed",
       invoice_number: "INV 1",
@@ -81,14 +81,14 @@ describe("ApiClient", () => {
   it("encodes the invoice id in the URL", async () => {
     const { fetchFn, calls } = fakeFetch(() => ok({ data: {} }));
     await new ApiClient(async () => "t", { fetchFn }).getInvoice("a/b");
-    assert.equal(calls[0]!.url, "/api/invoices/a%2Fb");
+    assert.equal(calls[0]!.url, "/api/v1/invoices/a%2Fb");
   });
 
   it("posts to the retry endpoint", async () => {
     const { fetchFn, calls } = fakeFetch(() => ok({ data: { id: "i1", status: "pending" } }, 202));
     const result = await new ApiClient(async () => "t", { fetchFn }).retryInvoice("i1");
     assert.equal(result.status, "pending");
-    assert.equal(calls[0]!.url, "/api/invoices/i1/retry");
+    assert.equal(calls[0]!.url, "/api/v1/invoices/i1/retry");
     assert.equal(calls[0]!.init.method, "POST");
   });
 

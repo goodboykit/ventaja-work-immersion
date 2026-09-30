@@ -1,7 +1,24 @@
 import type { GovernmentClient, GovernmentInvoice, SubmissionOutcome } from "../domain/government-client.ts";
 
+/**
+ * Simulates a government invoicing service.
+ *
+ * Key behaviour for Part I (crash recovery):
+ *   The government remembers every invoice ID it accepted. If Tubo crashes after
+ *   the government said "success" but before Tubo records it, the worker will
+ *   resend the same invoice. The government sees the same invoiceId and returns
+ *   the SAME external reference — no duplicate is created.
+ */
 export class MockGovernmentClient implements GovernmentClient {
-  async submitInvoice(_invoice: GovernmentInvoice): Promise<SubmissionOutcome> {
+  private readonly accepted = new Map<string, string>();
+
+  async submitInvoice(invoice: GovernmentInvoice): Promise<SubmissionOutcome> {
+    const existing = this.accepted.get(invoice.invoiceId);
+    if (existing) {
+      await delay(100);
+      return { result: "success", externalRef: existing, httpStatus: 200 };
+    }
+
     const roll = Math.random();
 
     if (roll < 0.15) {
@@ -19,11 +36,9 @@ export class MockGovernmentClient implements GovernmentClient {
       return { result: "rejected", reason: "Invalid customer TIN format", httpStatus: 400 };
     }
 
-    return {
-      result: "success",
-      externalRef: `GOV-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      httpStatus: 200,
-    };
+    const externalRef = `GOV-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    this.accepted.set(invoice.invoiceId, externalRef);
+    return { result: "success", externalRef, httpStatus: 200 };
   }
 }
 

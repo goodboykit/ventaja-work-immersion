@@ -1,4 +1,5 @@
 export interface GovernmentInvoice {
+  invoiceId: string;
   invoiceNumber: string;
   invoiceDate: string;
   customerName: string;

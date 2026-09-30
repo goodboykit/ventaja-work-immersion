@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GovernmentClient, GovernmentInvoice } from "../domain/government-client.ts";
+import type { RateLimiter } from "../domain/rate-limiter.ts";
 
 interface ClaimedJob {
   id: string;
@@ -11,12 +12,20 @@ interface ClaimedJob {
 export class SubmissionWorker {
   private readonly db: SupabaseClient;
   private readonly government: GovernmentClient;
+  private readonly rateLimiter: RateLimiter;
   private readonly batchSize: number;
   private readonly leaseSeconds: number;
 
-  constructor(db: SupabaseClient, government: GovernmentClient, batchSize = 5, leaseSeconds = 60) {
+  constructor(
+    db: SupabaseClient,
+    government: GovernmentClient,
+    rateLimiter: RateLimiter,
+    batchSize = 5,
+    leaseSeconds = 60,
+  ) {
     this.db = db;
     this.government = government;
+    this.rateLimiter = rateLimiter;
     this.batchSize = batchSize;
     this.leaseSeconds = leaseSeconds;
   }
@@ -45,6 +54,7 @@ export class SubmissionWorker {
       return;
     }
 
+    await this.rateLimiter.acquire();
     const start = Date.now();
     const outcome = await this.government.submitInvoice(invoice);
     const durationMs = Date.now() - start;
@@ -68,7 +78,7 @@ export class SubmissionWorker {
   private async loadInvoice(invoiceId: string): Promise<GovernmentInvoice | null> {
     const { data: inv } = await this.db
       .from("invoices")
-      .select("invoice_number, invoice_date, customer_name, customer_tax_id, customer_email, currency, subtotal, tax_amount, total_amount")
+      .select("id, invoice_number, invoice_date, customer_name, customer_tax_id, customer_email, currency, subtotal, tax_amount, total_amount")
       .eq("id", invoiceId)
       .single();
 
@@ -81,6 +91,7 @@ export class SubmissionWorker {
       .order("line_number");
 
     return {
+      invoiceId: inv.id,
       invoiceNumber: inv.invoice_number,
       invoiceDate: inv.invoice_date,
       customerName: inv.customer_name,

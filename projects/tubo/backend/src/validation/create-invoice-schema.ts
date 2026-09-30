@@ -28,7 +28,7 @@ const itemSchema = z.strictObject({
 });
 
 export const createInvoiceSchema = z.strictObject({
-  invoice_number: text(50),
+  invoice_number: z.string().trim().min(1, "Required").max(50, "Too long (max 50 characters)").toUpperCase(),
   invoice_date: z.string().refine(isRealDate, "Enter a real date (YYYY-MM-DD)"),
   customer_name: text(200),
   customer_tax_id: text(50),

@@ -19,11 +19,7 @@ export function Navbar({ onCreateInvoice }: NavbarProps) {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Left: brand */}
         <div className="flex items-center gap-3">
-          <svg viewBox="0 0 32 32" className="h-7 w-7" aria-hidden="true">
-            <circle cx="16" cy="16" r="16" className="fill-brand" />
-            <path d="M10 12h12v2H10zm0 4h10v2H10zm0 4h8v2H10z" fill="#fff" />
-          </svg>
-          <span className="text-lg font-bold tracking-tight text-brand">Ventaja</span>
+          <img src="/ventaja-logo.jfif" alt="Ventaja" className="h-8 w-auto" />
           <span className="hidden sm:block text-sm text-slate-400">|</span>
           <span className="hidden sm:block text-sm text-slate-500">Invoicing &amp; Billing</span>
         </div>

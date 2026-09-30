@@ -8,12 +8,16 @@ import { json, readJsonBody, respond } from "./http.ts";
 // Turns HTTP requests into service calls and results into HTTP responses.
 // Uses the standard web Request/Response, so it works in Next.js and in plain tests.
 export class InvoiceApi {
-  private readonly authenticator: Authenticator;
-  private readonly service: InvoiceService;
+  protected readonly authenticator: Authenticator;
+  protected readonly service: InvoiceService;
 
   constructor(authenticator: Authenticator, service: InvoiceService) {
     this.authenticator = authenticator;
     this.service = service;
+  }
+
+  protected authenticateRequest(request: Request) {
+    return this.authenticator.authenticate(request);
   }
 
   // POST /api/invoices
