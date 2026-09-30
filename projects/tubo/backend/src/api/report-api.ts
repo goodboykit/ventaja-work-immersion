@@ -87,7 +87,7 @@ export class ReportApi {
         lines: [
           `Total invoices: ${report.totalCount}`,
           ...report.counts.map((c) => `${c.label}: ${c.count}`),
-          `Total amount: ${report.totalAmount}`,
+          `Total value: ${Number(report.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         ],
         viewUrl: `${this.appBaseUrl}/report/monthly?month=${month}`,
       });

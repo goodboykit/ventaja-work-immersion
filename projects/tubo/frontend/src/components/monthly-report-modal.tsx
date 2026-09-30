@@ -6,6 +6,12 @@ import type { MonthlyReport } from "@/lib/api-client";
 // A formal, printable monthly report. "Save as PDF" is the browser's own print dialog,
 // so no PDF library is needed and it works on every platform. The wording is fixed and
 // professional — written to be clear to a non-technical reader.
+function formatTotal(amount: string): string {
+  const n = Number(amount);
+  if (Number.isNaN(n)) return amount;
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function MonthlyReportModal({ report, onClose }: { report: MonthlyReport; onClose: () => void }) {
   const generated = new Date(report.generatedAt).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
 
@@ -50,7 +56,7 @@ export function MonthlyReportModal({ report, onClose }: { report: MonthlyReport;
               ))}
               <tr>
                 <td className="py-2 font-semibold">Total value</td>
-                <td className="py-2 text-right font-semibold">{report.totalAmount}</td>
+                <td className="py-2 text-right font-semibold">{formatTotal(report.totalAmount)}</td>
               </tr>
             </tbody>
           </table>

@@ -10,6 +10,14 @@ import { useToast } from "./toast";
 import { Spinner } from "./spinner";
 import { MonthlyReportModal } from "./monthly-report-modal";
 
+// Invoices can be in different currencies, so the combined total is shown as a formatted
+// number with thousands separators (not a single currency symbol, which would be misleading).
+function formatTotal(amount: string): string {
+  const n = Number(amount);
+  if (Number.isNaN(n)) return amount;
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // The month selector plus this month's totals and the report actions.
 export function MonthBar({ month, onChange }: { month: string; onChange: (m: string) => void }) {
   const { api } = useApp();
@@ -47,7 +55,7 @@ export function MonthBar({ month, onChange }: { month: string; onChange: (m: str
           <p className="text-sm font-semibold text-slate-800">{monthLabel(month)}</p>
           {report && (
             <p className="text-xs text-slate-400">
-              {report.totalCount} invoice{report.totalCount === 1 ? "" : "s"} · {report.totalAmount}
+              {report.totalCount} invoice{report.totalCount === 1 ? "" : "s"} · {formatTotal(report.totalAmount)}
             </p>
           )}
         </div>
