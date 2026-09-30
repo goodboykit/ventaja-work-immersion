@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { AuthContext, Identity } from "../auth/authenticator.ts";
 import type { Company, Invitation, Profile } from "../domain/company.ts";
+import type { AuditRepository } from "../repositories/audit-repository.ts";
 import type { CompanyRepository } from "../repositories/company-repository.ts";
 import type { RegisterCompanyInput } from "../validation/register-company-schema.ts";
 import type { EmailSender } from "./email/email-sender.ts";
@@ -11,11 +12,13 @@ export class CompanyService {
   private readonly companies: CompanyRepository;
   private readonly email: EmailSender;
   private readonly appBaseUrl: string;
+  private readonly audit: AuditRepository | undefined;
 
-  constructor(companies: CompanyRepository, email: EmailSender, appBaseUrl: string) {
+  constructor(companies: CompanyRepository, email: EmailSender, appBaseUrl: string, audit?: AuditRepository) {
     this.companies = companies;
     this.email = email;
     this.appBaseUrl = appBaseUrl.replace(/\/+$/, "");
+    this.audit = audit;
   }
 
   async getProfile(identity: Identity): Promise<Profile> {
@@ -40,6 +43,14 @@ export class CompanyService {
 
     const company = await this.companies.findByUserId(auth.userId);
     await this.email.sendInvite({ to: email, companyName: company?.name ?? "your company", acceptUrl });
+
+    await this.audit?.record({
+      companyId: auth.companyId,
+      actorUserId: auth.userId,
+      eventType: "teammate_invited",
+      summary: `An invitation was sent to ${email}.`,
+      metadata: { email },
+    });
 
     return { email, acceptUrl, expiresAt: invite.expiresAt };
   }

@@ -99,6 +99,16 @@ export class SupabaseInvoiceRepository implements InvoiceRepository {
     return (data ?? {}) as Partial<Record<InvoiceStatus, number>>;
   }
 
+  async monthlyTotals(companyId: string, from: string, to: string): Promise<import("../domain/audit.ts").MonthlyTotals> {
+    const { data, error } = await this.db.rpc("monthly_status_counts", {
+      p_company_id: companyId,
+      p_from: from,
+      p_to: to,
+    });
+    if (error) throw this.translate(error);
+    return data as import("../domain/audit.ts").MonthlyTotals;
+  }
+
   async retry(companyId: string, invoiceId: string): Promise<{ id: string; status: InvoiceStatus }> {
     const { data, error } = await this.db.rpc("retry_invoice", {
       p_company_id: companyId,

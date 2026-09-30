@@ -1,4 +1,4 @@
-import type { EmailSender, InviteEmail } from "./email-sender.ts";
+import type { EmailSender, InviteEmail, ReportEmail } from "./email-sender.ts";
 
 // Sends real email through Resend (https://resend.com) using its HTTP API — no SDK dependency,
 // so it stays lightweight and runs the same on every platform. It implements the same EmailSender
@@ -62,6 +62,45 @@ export class ResendEmailSender implements EmailSender {
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       throw new Error(`Resend failed to send the invite (HTTP ${response.status}): ${detail}`);
+    }
+  }
+
+  async sendReport(email: ReportEmail): Promise<void> {
+    const text = [
+      "Hello,",
+      "",
+      email.intro,
+      "",
+      ...email.lines,
+      "",
+      `You may view or print the full report here: ${email.viewUrl}`,
+      "",
+      "Kind regards,",
+      "Tubo",
+    ].join("\n");
+
+    const rows = email.lines.map((l) => `<tr><td style="padding:4px 0;">${escapeHtml(l)}</td></tr>`).join("");
+    const html = `
+      <div style="font-family: Arial, Helvetica, sans-serif; color: #1e293b; line-height: 1.6;">
+        <p>Hello,</p>
+        <p>${escapeHtml(email.intro)}</p>
+        <table style="border-collapse:collapse;">${rows}</table>
+        <p style="margin-top:20px;">
+          <a href="${escapeHtml(email.viewUrl)}"
+             style="background:#1e293b;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block;">
+            View full report
+          </a>
+        </p>
+      </div>`;
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: this.from, to: email.to, subject: email.subject, text, html }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(`Resend failed to send the report (HTTP ${response.status}): ${detail}`);
     }
   }
 }

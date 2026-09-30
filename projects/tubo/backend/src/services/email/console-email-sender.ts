@@ -1,4 +1,4 @@
-import type { EmailSender, InviteEmail } from "./email-sender.ts";
+import type { EmailSender, InviteEmail, ReportEmail } from "./email-sender.ts";
 
 // The default sender for development and this assessment: it does not send a real email,
 // it logs the invitation so the whole flow can be demonstrated without an email service.
@@ -9,5 +9,9 @@ export class ConsoleEmailSender implements EmailSender {
     console.log(
       `[email:invite] to=${email.to} company="${email.companyName}" accept=${email.acceptUrl}`,
     );
+  }
+
+  async sendReport(email: ReportEmail): Promise<void> {
+    console.log(`[email:report] to=${email.to} subject="${email.subject}" view=${email.viewUrl}`);
   }
 }

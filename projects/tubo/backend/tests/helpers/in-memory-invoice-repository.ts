@@ -95,6 +95,20 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     return counts;
   }
 
+  async monthlyTotals(companyId: string, from: string, to: string): Promise<import("../../src/domain/audit.ts").MonthlyTotals> {
+    const rows = this.stored
+      .filter((s) => s.companyId === companyId)
+      .map((s) => s.detail)
+      .filter((d) => d.invoice_date >= from && d.invoice_date <= to);
+    const counts: Record<string, number> = {};
+    let amount = 0;
+    for (const d of rows) {
+      counts[d.status] = (counts[d.status] ?? 0) + 1;
+      amount += Number(d.total_amount);
+    }
+    return { counts, total_count: rows.length, total_amount: amount.toFixed(2) };
+  }
+
   async retry(companyId: string, invoiceId: string): Promise<{ id: string; status: InvoiceStatus }> {
     const found = this.stored.find((s) => s.companyId === companyId && s.detail.id === invoiceId);
     if (!found) throw new NotFoundError();

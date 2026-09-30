@@ -12,6 +12,7 @@ export type {
   StatusSummary,
 } from "./domain/invoice.ts";
 export type { Company, Invitation, Profile } from "./domain/company.ts";
+export type { AuditEvent, AuditEventType, AuditReport, MonthlyReport, MonthlyTotals } from "./domain/audit.ts";
 export { InvoiceTotalsCalculator } from "./domain/invoice-totals.ts";
 export { createInvoiceSchema, parseCreateInvoice } from "./validation/create-invoice-schema.ts";
 export type { CreateInvoiceInput } from "./validation/create-invoice-schema.ts";

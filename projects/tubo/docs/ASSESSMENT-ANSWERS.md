@@ -39,7 +39,10 @@ Two words you will see a lot:
 | 7 | **Watch status update live** | Without refreshing, an invoice moves `pending → processing → submitted` (or `failed`) as the background worker sends it. | dashboard polling |
 | 8 | **Open invoice details** | See the full invoice, its items, current status, and a **timeline** of every send attempt (including errors and timing). | `invoice-detail-modal.tsx`, `lib/timeline.ts` |
 | 9 | **Retry a failed invoice** | For an invoice that failed after all automatic attempts, press **Retry** to try again with a fresh budget. | retry button + `POST /api/.../retry` |
-| 10 | **Stay isolated & secure** | Never see another company's data — enforced in the backend and again by the database. | auth + RLS |
+| 10 | **Work by month** | The dashboard shows a chosen month (default: current); a month picker moves between months, with that month's totals. | `month-bar.tsx`, `lib/month.ts` |
+| 11 | **Generate & email a monthly report** | A formal, printable monthly report (Save-as-PDF), and an "Email me" button that sends a formal summary + link. | `monthly-report-modal.tsx`, `/api/reports/monthly` |
+| 12 | **Review the audit trail** | A separate tab lists business events (created/submitted/rejected/failed/retried, teammate invited/joined) over past months/years, filterable by date, with a formal PDF report. | `audit-trail.tsx`, `/api/audit` |
+| 13 | **Stay isolated & secure** | Never see another company's data — enforced in the backend and again by the database. | auth + RLS |
 
 **What happens automatically (no user action needed):** the background worker keeps sending queued invoices to the government service, retries failures with increasing waits, respects the government's rate limit, and records every attempt — all on its own.
 

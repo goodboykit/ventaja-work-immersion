@@ -7,6 +7,15 @@ export interface InviteEmail {
   acceptUrl: string;
 }
 
+export interface ReportEmail {
+  to: string;
+  subject: string;
+  intro: string;          // formal opening sentence
+  lines: string[];        // formal summary lines (label: value)
+  viewUrl: string;        // link back to view/print the full report
+}
+
 export interface EmailSender {
   sendInvite(email: InviteEmail): Promise<void>;
+  sendReport(email: ReportEmail): Promise<void>;
 }

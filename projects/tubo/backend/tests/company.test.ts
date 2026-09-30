@@ -3,7 +3,7 @@ import { beforeEach, describe, it } from "node:test";
 import { CompanyApi } from "../src/api/company-api.ts";
 import { ConflictError, NotFoundError, ValidationError } from "../src/domain/errors.ts";
 import { CompanyService } from "../src/services/company-service.ts";
-import type { EmailSender, InviteEmail } from "../src/services/email/email-sender.ts";
+import type { EmailSender, InviteEmail, ReportEmail } from "../src/services/email/email-sender.ts";
 import { parseRegisterCompany } from "../src/validation/register-company-schema.ts";
 import { authA, FakeAuthenticator, newUser } from "./helpers/fake-authenticator.ts";
 import { InMemoryCompanyRepository } from "./helpers/in-memory-company-repository.ts";
@@ -11,8 +11,12 @@ import { InMemoryCompanyRepository } from "./helpers/in-memory-company-repositor
 // Records the invites it is asked to "send" so tests can assert on them.
 class SpyEmailSender implements EmailSender {
   readonly sent: InviteEmail[] = [];
+  readonly reports: ReportEmail[] = [];
   async sendInvite(email: InviteEmail): Promise<void> {
     this.sent.push(email);
+  }
+  async sendReport(email: ReportEmail): Promise<void> {
+    this.reports.push(email);
   }
 }
 

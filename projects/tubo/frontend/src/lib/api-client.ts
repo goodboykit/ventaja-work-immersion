@@ -1,6 +1,6 @@
-import type { Company, Invitation, InvoiceDetail, InvoiceStatus, InvoiceSummary, Profile, StatusSummary } from "@tubo/backend/shared";
+import type { AuditEvent, AuditReport, Company, Invitation, InvoiceDetail, InvoiceStatus, InvoiceSummary, MonthlyReport, Profile, StatusSummary } from "@tubo/backend/shared";
 
-export type { Invitation };
+export type { Invitation, AuditEvent, AuditReport, MonthlyReport };
 
 // An error the API reported (or a network problem, which has status 0).
 export class ApiError extends Error {
@@ -94,6 +94,30 @@ export class ApiClient {
 
   acceptInvite(token: string): Promise<Company> {
     return this.request<{ data: Company }>("POST", "/api/invitations/accept", { token }).then((r) => r.data);
+  }
+
+  listAudit(from?: string, to?: string): Promise<AuditEvent[]> {
+    const p = new URLSearchParams();
+    if (from) p.set("from", from);
+    if (to) p.set("to", to);
+    const qs = p.toString();
+    return this.request<{ data: AuditEvent[] }>("GET", `/api/audit${qs ? `?${qs}` : ""}`).then((r) => r.data);
+  }
+
+  monthlyReport(month: string): Promise<MonthlyReport> {
+    return this.request<{ data: MonthlyReport }>("GET", `/api/reports/monthly?month=${encodeURIComponent(month)}`).then((r) => r.data);
+  }
+
+  emailMonthlyReport(month: string, to?: string): Promise<{ emailed: boolean; to: string }> {
+    return this.request<{ data: { emailed: boolean; to: string } }>("POST", "/api/reports/monthly/email", { month, to }).then((r) => r.data);
+  }
+
+  auditReport(from?: string, to?: string): Promise<AuditReport> {
+    const p = new URLSearchParams();
+    if (from) p.set("from", from);
+    if (to) p.set("to", to);
+    const qs = p.toString();
+    return this.request<{ data: AuditReport }>("GET", `/api/reports/audit${qs ? `?${qs}` : ""}`).then((r) => r.data);
   }
 
   getSummary(): Promise<StatusSummary> {
