@@ -590,7 +590,21 @@ POST /api/v2/invoices   { ...same v1 fields..., "due_date":"2026-10-30",
                           "payment_terms":"Net 30", "notes":"Thanks" }                 → 201 ✅
 POST /api/v2/invoices   { ...only v1 fields, no new ones... }                          → 201 ✅ (still valid)
 ```
-Because every new v2 field is optional, a v1 customer's exact request is a valid v2 request — so nobody's integration breaks and each customer migrates when ready. Migration path: deploy v2 beside v1 → announce → later add a `Deprecation` header to v1 → sunset only once everyone has moved.
+Because every new v2 field is optional, a v1 customer's exact request is a valid v2 request — so nobody's integration breaks and each customer migrates when ready.
+
+**Is URL-path versioning "the standard"?** It's **one of the three accepted industry standards** — and the most common and readable:
+
+| Approach | Example | Who uses it | Trade-off |
+|---|---|---|---|
+| **URL path** (ours) | `/api/v2/invoices` | GitHub (`/v3`), Twitter, early Stripe | Obvious, easy to test/route/cache. Version is visible in the URL. |
+| **Header / media type** | `Accept: application/vnd.tubo.v2+json` | GitHub (newer) | Cleaner URLs, but harder to test and debug. |
+| **Date-based** | `Tubo-Version: 2026-01-01` | Stripe (today) | Best for *many* tiny changes; more machinery to maintain. |
+
+We chose **URL path** because it's the simplest to understand, test, and demo, and the change here (a few optional fields) is small — a full date-based scheme would be over-engineering. What makes it *production-grade* is the **lifecycle around it**, which is standard company protocol:
+1. **Deploy v2 beside v1** — both live, nothing changes for v1 users.
+2. **Announce** v2 and document the new fields.
+3. **Deprecation window** — add a `Deprecation` + `Sunset` header to v1 responses and give a clear support window (e.g. 6–12 months).
+4. **Monitor** v1 usage; only **retire** v1 once traffic reaches zero.
 
 📁 Where to find it: `backend/src/api/invoice-api-v2.ts` (extends v1), `backend/src/validation/create-invoice-v2-schema.ts` (v1 + optional fields), routes in `frontend/src/app/api/v2/invoices/**`. See also [`DECISIONS.md` §M](./DECISIONS.md).
 
@@ -612,18 +626,47 @@ Metrics: CPU 35%, Memory 55%, DB CPU 20%, API latency normal, **queue waiting jo
 
 ---
 
-## Part O — Code quality
+## Part O — Code quality (what we actually did, concretely)
 
-- **Project structure:** one folder per job — `domain/`, `validation/`, `services/`, `repositories/`, `auth/`, `api/`. Database access lives only in `repositories/`.
-- **Naming:** a file's name says what it does (e.g. `submission-worker.ts`).
-- **Separation of concerns:** HTTP layer, business rules, and database access are separate and swappable.
-- **Error handling:** typed errors (`ValidationError`, `NotFoundError`, …) map to the right HTTP status.
-- **Input validation:** strict Zod schemas with clear per-field messages.
-- **Reusable code:** the money calculator and the create-schema are shared by backend and frontend, so validation and totals aren't duplicated.
-- **Security:** RLS on every table; secrets server-side only.
-- **Git usage:** small, described commits.
+The PDF lists nine quality areas. Here is exactly what we did for each, and how it makes the code efficient and easy to change.
 
-📁 Where to find it: the folder layout under `backend/src/`; shared code via `@tubo/backend/shared`.
+**1. Project structure — one folder per responsibility.**
+`backend/src/` is split into `domain/` (types, errors, money math), `validation/` (input schemas), `services/` (business rules + worker), `repositories/` (the *only* code that touches the database), `auth/`, and `api/` (HTTP in/out). A new reader finds any piece of logic in seconds because each folder has one job. Everything is wired together in one place — the composition root `backend/src/index.ts` — so you can see the whole system's dependencies at a glance.
+
+**2. Naming — the file name tells you what it does.**
+`submission-worker.ts`, `token-bucket-rate-limiter.ts`, `supabase-invoice-repository.ts`. No `utils.ts` grab-bags, no clever abbreviations.
+
+**3. Separation of concerns — layers talk through interfaces, not concretions.**
+The API layer knows nothing about SQL; the service layer knows nothing about HTTP; only repositories touch the database. Each boundary is a TypeScript **interface** (`GovernmentClient`, `RateLimiter`, `InvoiceRepository`, `CompanyRepository`, `Authenticator`, `EmailSender`). This is dependency injection: in production we inject the real class, in tests we inject a fake — the code under test never changes. Example: the worker takes a `GovernmentClient` in its constructor, so tests pass a spy and production passes the mock, with zero edits to the worker.
+
+**4. Error handling — typed errors that map to HTTP once, in one place.**
+Every expected failure is an `AppError` subclass (`ValidationError` 400, `UnauthorizedError` 401, `ForbiddenError` 403, `NotFoundError` 404, `ConflictError` 409, `UnprocessableError` 422). A single `respond()` wrapper turns them into JSON and turns *anything unexpected* into a safe generic 500 (no stack traces leak). The database's short error names are translated to these types in one method (`translate()` in the invoice repository), so error handling isn't scattered.
+
+**5. Input validation — strict schemas, at the edge, with clear messages.**
+Zod `strictObject` schemas validate every request and **reject unknown fields**. Messages are per-field and human ("Enter a real date (YYYY-MM-DD)") so the frontend shows them directly under the input. Validation happens once, at the boundary, before any business logic runs.
+
+**6. Reusable code — shared between frontend and backend, never duplicated.**
+The money calculator (`InvoiceTotalsCalculator`) and the create-invoice schema are exported from `@tubo/backend/shared` and imported by *both* the backend and the browser form. So the form's live totals and the server's authoritative totals use the **same** code and can never disagree. DRY where it matters, not abstraction for its own sake.
+
+**7. Database design — integrity enforced by the database, not hoped for in code.**
+Unique constraints, `CHECK`s (`total = subtotal + tax`), foreign keys with `on delete cascade`, immutability triggers, indexes on every queried column, and RLS on every table. The database is the last line of defense, so a bug in application code still can't corrupt data.
+
+**8. Security practices.**
+RLS on all tables; the service-role key is server-side only; secrets live in git-ignored `.env`; 404-not-403 for cross-company access; all writes go through `SECURITY DEFINER` functions. (See Part E.)
+
+**9. Git usage.**
+Small, described commits with clear messages; secrets never committed (`.gitignore`); work checkpointed and pushed.
+
+**Efficiency specifically (why it's not just clean but fast):**
+- **No N+1 queries** — a list is one query; the invoice detail loads header + items + job + logs in a single joined select; status counts are one grouped query.
+- **Keyset (cursor) pagination**, not `OFFSET` — stays fast on millions of rows.
+- **Indexes** match the real access patterns: `(company_id, created_at desc)` for the list, `(company_id, status)` for filters, a partial index on due jobs for the worker.
+- **Bounded worker** — claims a small batch with `FOR UPDATE SKIP LOCKED`, so many workers scale without stepping on each other, and a rate limiter caps external calls.
+- **Exact money math** with BigInt cents — no floating-point drift, no rounding bugs.
+- **Erasable TypeScript** (no enums / no constructor parameter-properties, `.ts` import paths) so Node runs the backend directly with no build step.
+- **Tested at every layer** — 115 backend + 55 frontend unit tests *and* a live-database test that proved concurrency, idempotency, RLS, and backoff against real Postgres.
+
+📁 Where to find it: layers under `backend/src/`; DI wiring in `backend/src/index.ts`; shared code via `backend/src/shared.ts`; error mapping in `backend/src/api/http.ts` + `backend/src/domain/errors.ts`; indexes/constraints in `backend/supabase/migrations/`.
 
 ---
 

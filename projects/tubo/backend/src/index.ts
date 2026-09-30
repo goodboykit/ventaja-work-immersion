@@ -7,6 +7,8 @@ import { SupabaseCompanyRepository } from "./repositories/supabase-company-repos
 import { SupabaseInvoiceRepository } from "./repositories/supabase-invoice-repository.ts";
 import { CompanyService } from "./services/company-service.ts";
 import { ConsoleEmailSender } from "./services/email/console-email-sender.ts";
+import { ResendEmailSender } from "./services/email/resend-email-sender.ts";
+import type { EmailSender } from "./services/email/email-sender.ts";
 import { InvoiceService } from "./services/invoice-service.ts";
 import { MockGovernmentClient } from "./services/mock-government-client.ts";
 import { SubmissionWorker } from "./services/submission-worker.ts";
@@ -33,8 +35,20 @@ export function createBackend(env: Record<string, string | undefined> = process.
 
   // Email transport is behind an interface. The console sender logs the invite link so the
   // flow works without an email service; swap in a real EmailSender (Resend/SMTP) for production.
-  const appBaseUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const companyService = new CompanyService(companies, new ConsoleEmailSender(), appBaseUrl);
+  // The app base URL is used to build invite links. Prefer an explicit setting, then fall back
+  // to the domain Vercel injects automatically, then to localhost for local dev.
+  const appBaseUrl =
+    env.NEXT_PUBLIC_APP_URL ??
+    (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) ??
+    (env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined) ??
+    "http://localhost:3000";
+
+  // Use real email (Resend) when an API key is configured; otherwise log the invite link
+  // to the console so local dev and demos work with no email service.
+  const emailSender: EmailSender = env.RESEND_API_KEY
+    ? new ResendEmailSender(env.RESEND_API_KEY, env.EMAIL_FROM)
+    : new ConsoleEmailSender();
+  const companyService = new CompanyService(companies, emailSender, appBaseUrl);
 
   return {
     invoiceApi: new InvoiceApi(authenticator, invoiceService),

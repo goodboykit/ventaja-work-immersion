@@ -158,7 +158,15 @@ invoices  ──< processing_logs (one invoice, many attempt logs)
 - The backend verifies the token, looks up the user's company, and filters all queries by `company_id`
 - RLS policies are a second defense layer: even a direct database query cannot see another company's data
 - 404 (not 403) for another company's invoice — the API does not reveal which IDs exist
-- **Team invitations** — a user with a company can invite teammates by email (`POST /api/invitations`). The invite is a single-use, expiring token; accepting it (`POST /api/invitations/accept`) links the new user to the same company, so both share all invoices under the existing RLS rules. Email is sent through an `EmailSender` interface — a console/mock sender by default (logs the accept link so it works with no email service), swappable for a real provider via dependency injection.
+- **Team invitations** — a user with a company can invite teammates by email (`POST /api/invitations`). The invite is a single-use, expiring token; accepting it (`POST /api/invitations/accept`) links the new user to the same company, so both share all invoices under the existing RLS rules. Email is sent through an `EmailSender` interface: **real email via Resend** when `RESEND_API_KEY` is set, otherwise a console sender that logs the accept link (so it works with no email service). Swapping providers is a one-line change (dependency injection).
+
+**Optional environment variables for real email + correct invite links (set these on Vercel):**
+```
+NEXT_PUBLIC_APP_URL=https://your-app.vercel.app   # makes invite links use the live domain (auto-detected on Vercel if unset)
+RESEND_API_KEY=re_...                              # from resend.com — enables real email delivery
+EMAIL_FROM=Tubo <onboarding@resend.dev>            # verified sender (defaults to Resend's test sender)
+```
+Without `RESEND_API_KEY`, invites still work — the app shows a copyable invite link instead of emailing it.
 
 ---
 
