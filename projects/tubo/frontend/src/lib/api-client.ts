@@ -1,4 +1,6 @@
-import type { Company, InvoiceDetail, InvoiceStatus, InvoiceSummary, Profile, StatusSummary } from "@tubo/backend/shared";
+import type { Company, Invitation, InvoiceDetail, InvoiceStatus, InvoiceSummary, Profile, StatusSummary } from "@tubo/backend/shared";
+
+export type { Invitation };
 
 // An error the API reported (or a network problem, which has status 0).
 export class ApiError extends Error {
@@ -78,6 +80,20 @@ export class ApiClient {
 
   registerCompany(name: string, taxId: string): Promise<Company> {
     return this.request<{ data: Company }>("POST", "/api/company", { name, tax_id: taxId }).then((r) => r.data);
+  }
+
+  inviteTeammate(email: string): Promise<{ email: string; acceptUrl: string; expiresAt: string }> {
+    return this.request<{ data: { email: string; acceptUrl: string; expiresAt: string } }>(
+      "POST", "/api/invitations", { email },
+    ).then((r) => r.data);
+  }
+
+  listInvitations(): Promise<Invitation[]> {
+    return this.request<{ data: Invitation[] }>("GET", "/api/invitations").then((r) => r.data);
+  }
+
+  acceptInvite(token: string): Promise<Company> {
+    return this.request<{ data: Company }>("POST", "/api/invitations/accept", { token }).then((r) => r.data);
   }
 
   getSummary(): Promise<StatusSummary> {

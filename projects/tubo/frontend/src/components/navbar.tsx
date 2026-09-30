@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown, LogOut, Plus } from "lucide-react";
+import { ChevronDown, LogOut, Plus, UserPlus } from "lucide-react";
 import { useState } from "react";
+import { InviteTeammateModal } from "@/components/invite-teammate-modal";
 import { initialsFromEmail } from "@/lib/format";
 import { useApp } from "@/providers/providers";
 
@@ -13,6 +14,7 @@ export function Navbar({ onCreateInvoice }: NavbarProps) {
     const { session, signOut } = useApp();
     const email = session?.user.email ?? null;
     const [menuOpen, setMenuOpen] = useState(false);
+    const [inviteOpen, setInviteOpen] = useState(false);
 
     return (
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
@@ -60,6 +62,13 @@ export function Navbar({ onCreateInvoice }: NavbarProps) {
                                     </div>
                                     <button
                                         type="button"
+                                        onClick={() => { setMenuOpen(false); setInviteOpen(true); }}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                                    >
+                                        <UserPlus className="h-4 w-4" /> Invite teammate
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => { setMenuOpen(false); signOut(); }}
                                         className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
                                     >
@@ -71,6 +80,8 @@ export function Navbar({ onCreateInvoice }: NavbarProps) {
                     </div>
                 </div>
             </div>
+
+            {inviteOpen && <InviteTeammateModal onClose={() => setInviteOpen(false)} />}
         </header>
     );
 }

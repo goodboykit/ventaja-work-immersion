@@ -11,7 +11,7 @@ export type {
   ProcessingLogEntry,
   StatusSummary,
 } from "./domain/invoice.ts";
-export type { Company, Profile } from "./domain/company.ts";
+export type { Company, Invitation, Profile } from "./domain/company.ts";
 export { InvoiceTotalsCalculator } from "./domain/invoice-totals.ts";
 export { createInvoiceSchema, parseCreateInvoice } from "./validation/create-invoice-schema.ts";
 export type { CreateInvoiceInput } from "./validation/create-invoice-schema.ts";

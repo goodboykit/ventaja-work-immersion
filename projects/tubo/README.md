@@ -23,14 +23,19 @@ cd projects/tubo
 npm install            # installs both backend and frontend (npm workspaces)
 ```
 
+Works on **Windows, macOS, and Linux** — npm installs the correct native build tools (Tailwind/lightningcss) for your platform automatically. If a build ever fails with *"Cannot find module …darwin/win32….node"*, your platform's optional package didn't install; run `npm install` again (or `rm -rf node_modules && npm install`).
+
 ### 2. Configure environment variables
 
 Create `projects/tubo/backend/.env` with your Supabase credentials:
 
 ```
-SUPABASE_URL=https://<your-project>.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
-DATABASE_URL=postgresql://postgres.<ref>:<password>@<host>:5432/postgres
+# Pooled connection (port 6543) for the app; direct connection (port 5432) for migrations
+DATABASE_URL=postgresql://postgres.<ref>:<password>@<host>:6543/postgres
+DIRECT_URL=postgresql://postgres.<ref>:<password>@<host>:5432/postgres
 ```
 
 The frontend reads these automatically via `next.config.ts` — no separate `.env` file needed.
@@ -153,6 +158,7 @@ invoices  ──< processing_logs (one invoice, many attempt logs)
 - The backend verifies the token, looks up the user's company, and filters all queries by `company_id`
 - RLS policies are a second defense layer: even a direct database query cannot see another company's data
 - 404 (not 403) for another company's invoice — the API does not reveal which IDs exist
+- **Team invitations** — a user with a company can invite teammates by email (`POST /api/invitations`). The invite is a single-use, expiring token; accepting it (`POST /api/invitations/accept`) links the new user to the same company, so both share all invoices under the existing RLS rules. Email is sent through an `EmailSender` interface — a console/mock sender by default (logs the accept link so it works with no email service), swappable for a real provider via dependency injection.
 
 ---
 
@@ -175,7 +181,7 @@ All endpoints require `Authorization: Bearer <Supabase access token>`.
 
 ## Assumptions
 
-1. **Single-tenant per login** — each user belongs to exactly one company; multi-company switching is out of scope.
+1. **One company per user, multiple users per company** — a user belongs to exactly one company, but a company can have many users. Teammates join via **email invitation** (single-use, expiring token). Switching between companies with one login is out of scope.
 2. **Government API is simulated** — a mock in-memory client with realistic failure modes (503 errors, timeouts, rejections). A real implementation would swap the class via dependency injection.
 3. **Worker runs in-process** — triggered by frontend polling (`POST /api/worker`). In production, this would be a standalone cron job or dedicated process.
 4. **Invoices are immutable after creation** — only status and processing fields change. Editing invoice data would require a new version with its own audit trail.

@@ -1,14 +1,25 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { CompanyApi } from "../src/api/company-api.ts";
-import { ConflictError, ValidationError } from "../src/domain/errors.ts";
+import { ConflictError, NotFoundError, ValidationError } from "../src/domain/errors.ts";
 import { CompanyService } from "../src/services/company-service.ts";
+import type { EmailSender, InviteEmail } from "../src/services/email/email-sender.ts";
 import { parseRegisterCompany } from "../src/validation/register-company-schema.ts";
-import { FakeAuthenticator, newUser } from "./helpers/fake-authenticator.ts";
+import { authA, FakeAuthenticator, newUser } from "./helpers/fake-authenticator.ts";
 import { InMemoryCompanyRepository } from "./helpers/in-memory-company-repository.ts";
+
+// Records the invites it is asked to "send" so tests can assert on them.
+class SpyEmailSender implements EmailSender {
+  readonly sent: InviteEmail[] = [];
+  async sendInvite(email: InviteEmail): Promise<void> {
+    this.sent.push(email);
+  }
+}
 
 let service: CompanyService;
 let api: CompanyApi;
+let companies: InMemoryCompanyRepository;
+let mailer: SpyEmailSender;
 
 const request = (method: string, body?: unknown, token = "token-new") =>
   new Request("http://localhost/api/company", {
@@ -19,8 +30,9 @@ const request = (method: string, body?: unknown, token = "token-new") =>
 const bodyOf = async (response: Response) => (await response.json()) as any;
 
 beforeEach(() => {
-  const companies = new InMemoryCompanyRepository();
-  service = new CompanyService(companies);
+  companies = new InMemoryCompanyRepository();
+  mailer = new SpyEmailSender();
+  service = new CompanyService(companies, mailer, "http://localhost:3000");
   api = new CompanyApi(new FakeAuthenticator(), service);
 });
 
@@ -95,5 +107,105 @@ describe("POST /api/company", () => {
   it("401 without a token", async () => {
     const noToken = new Request("http://localhost/api/company", { method: "POST", body: "{}" });
     assert.equal((await api.registerCompany(noToken)).status, 401);
+  });
+});
+
+describe("Team invitations — service", () => {
+  const companyA = { id: authA.companyId, name: "Company A", tax_id: "AAA-111" };
+
+  it("invite creates a pending invite and sends an email with the accept link", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    const result = await service.invite(authA, "teammate@example.com");
+
+    assert.match(result.acceptUrl, /^http:\/\/localhost:3000\/invite\/.+/);
+    assert.equal(mailer.sent.length, 1);
+    assert.equal(mailer.sent[0]!.to, "teammate@example.com");
+    assert.equal(mailer.sent[0]!.companyName, "Company A");
+    assert.equal(mailer.sent[0]!.acceptUrl, result.acceptUrl);
+
+    const pending = await service.listInvitations(authA);
+    assert.equal(pending.length, 1);
+    assert.equal(pending[0]!.email, "teammate@example.com");
+  });
+
+  it("a second user can accept and joins the same company", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    await service.invite(authA, "teammate@example.com");
+    const token = mailer.sent[0]!.acceptUrl.split("/invite/")[1]!;
+
+    const joined = await service.acceptInvite(newUser, token);
+    assert.equal(joined.id, companyA.id);
+    // now the new user's profile shows the SAME company
+    assert.deepEqual((await service.getProfile(newUser)).company, companyA);
+  });
+
+  it("an invite is single-use", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    await service.invite(authA, "teammate@example.com");
+    const token = mailer.sent[0]!.acceptUrl.split("/invite/")[1]!;
+
+    await service.acceptInvite(newUser, token);
+    await assert.rejects(service.acceptInvite({ userId: "someone-else", email: null }, token), NotFoundError);
+  });
+
+  it("a user who already has a company cannot accept", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    await service.invite(authA, "teammate@example.com");
+    const token = mailer.sent[0]!.acceptUrl.split("/invite/")[1]!;
+    await assert.rejects(service.acceptInvite({ userId: authA.userId, email: "a@example.com" }, token), ConflictError);
+  });
+
+  it("an expired invite cannot be accepted", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    // create an already-expired invite directly through the repo
+    await companies.createInvitation(authA.userId, "late@example.com", "expired-token-0000000000", new Date(Date.now() - 1000).toISOString());
+    await assert.rejects(service.acceptInvite(newUser, "expired-token-0000000000"), NotFoundError);
+  });
+
+  it("rejects a duplicate pending invite for the same email", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    await service.invite(authA, "dup@example.com");
+    await assert.rejects(service.invite(authA, "dup@example.com"), ConflictError);
+  });
+});
+
+describe("Team invitations — API", () => {
+  const companyA = { id: authA.companyId, name: "Company A", tax_id: "AAA-111" };
+  const inviteReq = (body: unknown, token = "token-a") =>
+    new Request("http://localhost/api/invitations", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  it("POST /api/invitations returns 201 with an accept link", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    const response = await api.invite(inviteReq({ email: "teammate@example.com" }));
+    assert.equal(response.status, 201);
+    assert.match((await bodyOf(response)).data.acceptUrl, /\/invite\//);
+  });
+
+  it("POST /api/invitations 403 when the caller has no company", async () => {
+    const response = await api.invite(inviteReq({ email: "x@example.com" }, "token-new"));
+    assert.equal(response.status, 403);
+  });
+
+  it("POST /api/invitations 400 for a bad email", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    assert.equal((await api.invite(inviteReq({ email: "not-an-email" }))).status, 400);
+  });
+
+  it("POST /api/invitations/accept 200 lets a new user join", async () => {
+    companies.seedMembership(authA.userId, companyA);
+    await service.invite(authA, "teammate@example.com");
+    const token = mailer.sent[0]!.acceptUrl.split("/invite/")[1]!;
+    const acceptReq = new Request("http://localhost/api/invitations/accept", {
+      method: "POST",
+      headers: { authorization: "Bearer token-new", "content-type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const response = await api.acceptInvite(acceptReq);
+    assert.equal(response.status, 200);
+    assert.equal((await bodyOf(response)).data.id, companyA.id);
   });
 });

@@ -6,6 +6,7 @@ import { SupabaseAuthenticator } from "./auth/supabase-authenticator.ts";
 import { SupabaseCompanyRepository } from "./repositories/supabase-company-repository.ts";
 import { SupabaseInvoiceRepository } from "./repositories/supabase-invoice-repository.ts";
 import { CompanyService } from "./services/company-service.ts";
+import { ConsoleEmailSender } from "./services/email/console-email-sender.ts";
 import { InvoiceService } from "./services/invoice-service.ts";
 import { MockGovernmentClient } from "./services/mock-government-client.ts";
 import { SubmissionWorker } from "./services/submission-worker.ts";
@@ -30,10 +31,15 @@ export function createBackend(env: Record<string, string | undefined> = process.
 
   const invoiceService = new InvoiceService(new SupabaseInvoiceRepository(db));
 
+  // Email transport is behind an interface. The console sender logs the invite link so the
+  // flow works without an email service; swap in a real EmailSender (Resend/SMTP) for production.
+  const appBaseUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const companyService = new CompanyService(companies, new ConsoleEmailSender(), appBaseUrl);
+
   return {
     invoiceApi: new InvoiceApi(authenticator, invoiceService),
     invoiceApiV2: new InvoiceApiV2(authenticator, invoiceService),
-    companyApi: new CompanyApi(authenticator, new CompanyService(companies)),
+    companyApi: new CompanyApi(authenticator, companyService),
     worker: new SubmissionWorker(db, new MockGovernmentClient(), new TokenBucketRateLimiter(100, 100)),
   };
 }

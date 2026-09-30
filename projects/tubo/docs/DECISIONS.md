@@ -38,13 +38,15 @@ List filters: `status`, `invoice_number` (exact), `date_from`, `date_to` (inclus
 - **Cursor paging, not page numbers.** It stays fast on millions of rows (no OFFSET re-reading) and is stable while new invoices arrive. Cost: no "jump to page 7".
 - **`invoice_number` filter is an exact match**, so it uses the unique index. Prefix search would need a separate index.
 - **Only `failed` invoices can be retried.** `rejected` means the invoice is invalid (retrying cannot fix it); `pending` and `processing` are already being retried automatically; `submitted` is done. The retry runs under a row lock, so two simultaneous retries cannot both succeed.
-- **A retry keeps the attempt count** (the log stays correctly numbered) and gives a fresh budget of 8 more attempts.
+- **A retry keeps the attempt count** (the log stays correctly numbered) and gives a fresh budget of 15 more attempts.
 - **Another company's invoice returns 404, not 403**, so the API does not reveal which invoice IDs exist.
 - **Money uses BigInt whole-cent math** in code and `numeric` in the database. A test compares both on random data.
 - **The server ignores client totals.** If the client sends totals they must match, otherwise 400. The stored totals always come from the database.
 - **Invoices are immutable after creation.** Only status and result fields change, and only along valid transitions (enforced by triggers).
 - **Auth costs two lookups per request** (verify token, find company). Fine for now; a cache or local JWT verification would remove one.
 - **Reads and writes use the service-role key, always filtered by company.** Row Level Security is a second layer for anything that reaches the database directly (verified with a real signed-in role).
+- **Multiple users per company via email invitation.** The schema always allowed many users to share one `company_id`; we added the onboarding path to reach it. An owner invites a teammate by email; the invite is a single-use, expiring token; accepting links the new user to the same company, and RLS makes shared invoices work automatically. Email is behind an `EmailSender` interface (console/mock by default, real provider swappable) — the same DI pattern as the government client. Trade-off: mocked email transport avoids an external dependency for the assessment; guardrails enforce inviter-must-have-company, one-company-per-user, single-use, and expiry. Verified against the live database (invite → accept → shared company + RLS, single-use, expiry).
+- **No invoice delete — cancel via status instead.** Invoices are legal/financial records and the core promise is "never lost," so there is no DELETE endpoint and immutability triggers freeze the data. A mistake would be handled by a void/cancel *status* (new allowed transition + reason), keeping the row and its audit trail — never a hard delete.
 
 ## Asynchronous processing (Part H)
 
