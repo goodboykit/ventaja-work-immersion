@@ -87,9 +87,11 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     return this.stored.find((s) => s.companyId === companyId && s.detail.id === invoiceId)?.detail ?? null;
   }
 
-  async statusCounts(companyId: string): Promise<Partial<Record<InvoiceStatus, number>>> {
+  async statusCounts(companyId: string, dateFrom?: string, dateTo?: string): Promise<Partial<Record<InvoiceStatus, number>>> {
     const counts: Partial<Record<InvoiceStatus, number>> = {};
     for (const s of this.stored.filter((x) => x.companyId === companyId)) {
+      if (dateFrom && s.detail.invoice_date < dateFrom) continue;
+      if (dateTo && s.detail.invoice_date > dateTo) continue;
       counts[s.detail.status] = (counts[s.detail.status] ?? 0) + 1;
     }
     return counts;

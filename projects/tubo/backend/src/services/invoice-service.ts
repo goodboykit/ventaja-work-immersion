@@ -60,8 +60,8 @@ export class InvoiceService {
     return { data, next_cursor: hasMore && last ? encodeCursor({ createdAt: last.created_at, id: last.id }) : null };
   }
 
-  async summary(auth: AuthContext): Promise<StatusSummary> {
-    const counts = await this.invoices.statusCounts(auth.companyId);
+  async summary(auth: AuthContext, dateFrom?: string, dateTo?: string): Promise<StatusSummary> {
+    const counts = await this.invoices.statusCounts(auth.companyId, dateFrom, dateTo);
     const summary = { total: 0 } as StatusSummary;
     for (const status of INVOICE_STATUSES) {
       summary[status] = counts[status] ?? 0;

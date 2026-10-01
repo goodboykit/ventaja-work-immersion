@@ -48,7 +48,7 @@ export function Dashboard() {
 
     try {
       const [summaryResult, listResult] = await Promise.all([
-        opts?.cursor ? null : api.getSummary().catch(() => null),
+        opts?.cursor ? null : api.getSummary(from, to).catch(() => null),
         api.listInvoices({
           status: filter ?? undefined,
           invoiceNumber: debouncedSearch.current || undefined,

@@ -120,8 +120,12 @@ export class ApiClient {
     return this.request<{ data: AuditReport }>("GET", `/api/reports/audit${qs ? `?${qs}` : ""}`).then((r) => r.data);
   }
 
-  getSummary(): Promise<StatusSummary> {
-    return this.request<{ data: StatusSummary }>("GET", "/api/v1/invoices/summary").then((r) => r.data);
+  getSummary(dateFrom?: string, dateTo?: string): Promise<StatusSummary> {
+    const p = new URLSearchParams();
+    if (dateFrom) p.set("date_from", dateFrom);
+    if (dateTo) p.set("date_to", dateTo);
+    const qs = p.toString();
+    return this.request<{ data: StatusSummary }>("GET", `/api/v1/invoices/summary${qs ? `?${qs}` : ""}`).then((r) => r.data);
   }
 
   listInvoices(query: InvoiceQuery = {}): Promise<InvoicePage> {

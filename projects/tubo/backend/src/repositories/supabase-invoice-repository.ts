@@ -93,8 +93,12 @@ export class SupabaseInvoiceRepository implements InvoiceRepository {
     } as unknown as InvoiceDetail;
   }
 
-  async statusCounts(companyId: string): Promise<Partial<Record<InvoiceStatus, number>>> {
-    const { data, error } = await this.db.rpc("invoice_status_counts", { p_company_id: companyId });
+  async statusCounts(companyId: string, dateFrom?: string, dateTo?: string): Promise<Partial<Record<InvoiceStatus, number>>> {
+    const { data, error } = await this.db.rpc("invoice_status_counts_by_date", {
+      p_company_id: companyId,
+      p_from: dateFrom ?? null,
+      p_to: dateTo ?? null,
+    });
     if (error) throw this.translate(error);
     return (data ?? {}) as Partial<Record<InvoiceStatus, number>>;
   }

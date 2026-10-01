@@ -49,7 +49,10 @@ export class InvoiceApi {
   getSummary(request: Request): Promise<Response> {
     return respond(async () => {
       const auth = await this.authenticator.authenticate(request);
-      return json(200, { data: await this.service.summary(auth) });
+      const params = new URL(request.url).searchParams;
+      const dateFrom = params.get("date_from") ?? undefined;
+      const dateTo = params.get("date_to") ?? undefined;
+      return json(200, { data: await this.service.summary(auth, dateFrom, dateTo) });
     });
   }
 

@@ -38,7 +38,7 @@ export interface InvoiceRepository {
   create(invoice: NewInvoice): Promise<CreatedInvoice>;
   list(query: InvoiceListQuery): Promise<InvoiceSummary[]>;
   findById(companyId: string, invoiceId: string): Promise<InvoiceDetail | null>;
-  statusCounts(companyId: string): Promise<Partial<Record<InvoiceStatus, number>>>;
+  statusCounts(companyId: string, dateFrom?: string, dateTo?: string): Promise<Partial<Record<InvoiceStatus, number>>>;
   monthlyTotals(companyId: string, from: string, to: string): Promise<MonthlyTotals>;
   retry(companyId: string, invoiceId: string): Promise<{ id: string; status: InvoiceStatus }>;
 }
