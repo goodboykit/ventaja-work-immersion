@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { ChatApi, UnavailableChatApi } from "./api/chat-api.ts";
 import { CompanyApi } from "./api/company-api.ts";
 import { InvoiceApi } from "./api/invoice-api.ts";
 import { InvoiceApiV2 } from "./api/invoice-api-v2.ts";
@@ -8,10 +9,12 @@ import { SupabaseAuditRepository } from "./repositories/supabase-audit-repositor
 import { SupabaseCompanyRepository } from "./repositories/supabase-company-repository.ts";
 import { SupabaseInvoiceRepository } from "./repositories/supabase-invoice-repository.ts";
 import { AuditService } from "./services/audit-service.ts";
+import { ChatService } from "./services/chat-service.ts";
 import { CompanyService } from "./services/company-service.ts";
 import { ConsoleEmailSender } from "./services/email/console-email-sender.ts";
 import { ResendEmailSender } from "./services/email/resend-email-sender.ts";
 import type { EmailSender } from "./services/email/email-sender.ts";
+import { GoogleGeminiClient } from "./services/gemini-client.ts";
 import { InvoiceService } from "./services/invoice-service.ts";
 import { MockGovernmentClient } from "./services/mock-government-client.ts";
 import { SubmissionWorker } from "./services/submission-worker.ts";
@@ -22,6 +25,7 @@ export interface Backend {
   invoiceApiV2: InvoiceApiV2;
   companyApi: CompanyApi;
   reportApi: ReportApi;
+  chatApi: ChatApi | UnavailableChatApi;
   worker: SubmissionWorker;
 }
 
@@ -57,11 +61,17 @@ export function createBackend(env: Record<string, string | undefined> = process.
     : new ConsoleEmailSender();
   const companyService = new CompanyService(companies, emailSender, appBaseUrl, auditRepo);
 
+  const geminiKey = env.GEMINI_API_KEY;
+  const chatApi = geminiKey
+    ? new ChatApi(authenticator, new ChatService(invoiceRepo, auditRepo, new GoogleGeminiClient(geminiKey)))
+    : new UnavailableChatApi();
+
   return {
     invoiceApi: new InvoiceApi(authenticator, invoiceService),
     invoiceApiV2: new InvoiceApiV2(authenticator, invoiceService),
     companyApi: new CompanyApi(authenticator, companyService),
     reportApi: new ReportApi(authenticator, auditService, companies, emailSender, appBaseUrl),
+    chatApi,
     worker: new SubmissionWorker(db, new MockGovernmentClient(), new TokenBucketRateLimiter(100, 100)),
   };
 }

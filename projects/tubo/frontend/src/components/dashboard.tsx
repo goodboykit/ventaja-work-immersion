@@ -14,6 +14,7 @@ import { CreateInvoiceModal } from "./create-invoice-modal";
 import { InvoiceDetailModal } from "./invoice-detail-modal";
 import { MonthBar } from "./month-bar";
 import { AuditTrail } from "./audit-trail";
+import { ChatWidget } from "./chat-widget";
 
 const EMPTY_SUMMARY: StatusSummary = { pending: 0, processing: 0, submitted: 0, failed: 0, rejected: 0, total: 0 };
 const EMPTY_LIST: InvoiceListState = { rows: [], nextCursor: null };
@@ -73,9 +74,10 @@ export function Dashboard() {
     }
   }, [api, filter, month, toast]);
 
-  // Reload when the filter or month changes.
+  // Reload when the filter or month changes — reset stats immediately so they don't show stale counts.
   useEffect(() => {
     setList(EMPTY_LIST);
+    setSummary(EMPTY_SUMMARY);
     setInitialLoading(true);
     loadData();
   }, [filter, month, loadData]);
@@ -151,6 +153,7 @@ export function Dashboard() {
 
       <CreateInvoiceModal open={creating} onClose={() => setCreating(false)} onCreated={refresh} />
       <InvoiceDetailModal invoiceId={selectedId} onClose={() => setSelectedId(null)} onRetried={refresh} />
+      <ChatWidget />
     </>
   );
 }

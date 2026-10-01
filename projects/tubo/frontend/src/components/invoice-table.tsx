@@ -84,23 +84,20 @@ export function InvoiceTable({
                     {invoice.invoice_number}
                   </p>
                 </td>
-                <td className="px-4 py-3">
-                  <p className="text-slate-900">{invoice.customer_name}</p>
-                  <p className="text-xs text-slate-400">{invoice.customer_email}</p>
-                </td>
+                <td className="px-4 py-3 text-slate-900">{invoice.customer_name}</td>
                 <td className="px-4 py-3 text-slate-600">{formatDate(invoice.invoice_date)}</td>
                 <td className="px-4 py-3 text-right">
                   <p className="font-semibold text-slate-900">{formatMoney(invoice.total_amount, invoice.currency)}</p>
                 </td>
                 <td className="px-4 py-3"><StatusPill status={invoice.status} /></td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onSelect(invoice.id)}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
-                  >
-                    <Eye className="h-3.5 w-3.5" /> View Details
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(invoice.id)}
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> View Details
+                    </button>
                 </td>
               </tr>
             ))}

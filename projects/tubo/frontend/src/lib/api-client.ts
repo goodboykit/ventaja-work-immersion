@@ -148,6 +148,10 @@ export class ApiClient {
     return this.request<{ data: { id: string; status: InvoiceStatus } }>("POST", `/api/v1/invoices/${encodeURIComponent(id)}/retry`).then((r) => r.data);
   }
 
+  chat(message: string): Promise<{ answer: string }> {
+    return this.request<{ data: { answer: string } }>("POST", "/api/chat", { message }).then((r) => r.data);
+  }
+
   private async request<T>(method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
     const token = await this.getToken();
     const headers: Record<string, string> = { ...extraHeaders };

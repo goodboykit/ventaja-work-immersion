@@ -1,7 +1,7 @@
 "use client";
 
 import type { InvoiceDetail } from "@tubo/backend/shared";
-import { AlertTriangle, CheckCircle, Clock, RefreshCw, X, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, Mail, RefreshCw, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ApiError } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatMoney, formatTimeUntil } from "@/lib/format";
@@ -105,6 +105,13 @@ export function InvoiceDetailModal({ invoiceId, onClose, onRetried }: InvoiceDet
               </div>
               <div className="flex items-center gap-2">
                 <StatusPill status={invoice.status} />
+                <a
+                  href={`mailto:${invoice.customer_email}`}
+                  title={invoice.customer_email}
+                  className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                >
+                  <Mail className="h-3.5 w-3.5" /> Email
+                </a>
                 {invoice.status === "failed" && (
                   <button type="button" onClick={handleRetry} disabled={retrying}
                     className="flex items-center gap-1 rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60">

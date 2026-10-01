@@ -29,6 +29,7 @@ export function AuditTrail() {
   const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
+    if (!from && !to) { setEvents([]); return; }
     setEvents(null);
     api.listAudit(from || undefined, to || undefined)
       .then(setEvents)
