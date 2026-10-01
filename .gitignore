@@ -33,3 +33,6 @@ Thumbs.db
 # Node / Next.js
 node_modules/
 .next/
+
+# Supabase CLI
+.temp/
